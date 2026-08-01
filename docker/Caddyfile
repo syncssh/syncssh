@@ -1,0 +1,34 @@
+# SYNCSSH_SITE_ADDRESS controls the site address:
+#   ssh.yourco.com   → that hostname
+#   localhost        → local trial
+#   :80              → plain HTTP (only sane if DEBUG=True)
+#
+# CADDY_TLS controls how TLS is obtained (leave empty for the default):
+#   ""                                  → automatic Let's Encrypt (no proxy in front)
+#   tls internal                        → Caddy self-signed (local trial, OR behind
+#                                          Cloudflare "Full" mode — no Let's Encrypt)
+#   tls /etc/caddy/origin/cert.pem /etc/caddy/origin/key.pem
+#                                       → serve a Cloudflare Origin CA cert
+#                                          (pair with Cloudflare "Full (strict)")
+{
+	email {$ACME_EMAIL}
+}
+
+{$SYNCSSH_SITE_ADDRESS} {
+	{$CADDY_TLS}
+	encode gzip
+
+	# Django-served paths → gunicorn. Caddy sets X-Forwarded-Proto, which
+	# Django trusts (SECURE_PROXY_SSL_HEADER) to know the request was HTTPS.
+	@backend path /api/* /install/* /accounts/* /admin/* /static/*
+	handle @backend {
+		reverse_proxy backend:8000
+	}
+
+	# Everything else is the SPA, with client-side routing fallback.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

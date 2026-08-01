@@ -1,0 +1,15 @@
+{% autoescape off %}Hello,
+
+{% if inviter %}{{ inviter }} has invited you{% else %}You've been invited{% endif %} to join the organization "{{ organization_name }}" on SyncSSH as {{ role }}.
+
+Accept the invitation:
+{{ invite_url }}
+
+This invite expires on {{ expires_at }}.
+
+If you weren't expecting this, you can safely ignore this email.
+
+--
+SyncSSH
+{{ app_base_url }}
+{% endautoescape %}

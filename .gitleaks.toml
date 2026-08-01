@@ -1,0 +1,16 @@
+# Gitleaks configuration. Default rules scan all production code and
+# configuration; only synthetic test fixtures are excluded.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic credentials used exclusively by automated tests."
+
+# Test fixtures. Every password literal in the security regression suite
+# is a hardcoded throwaway string used to create test users; none is a
+# real credential. Scoping to tests/ keeps production code in scope.
+paths = [
+    '''core/tests/.*''',
+    '''api/tests.*\.py''',
+]

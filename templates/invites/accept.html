@@ -1,0 +1,24 @@
+{% extends "allauth/layouts/base.html" %}
+{% comment %}
+The acceptance step must remain a server-rendered CSRF-protected form. It
+shares the allauth shell so the invite flow looks continuous before and after
+an invitee signs in.
+{% endcomment %}
+{% block head_title %}Accept invitation — syncssh{% endblock %}
+{% block brand_caption %}
+    <p class="caption">You’ve been invited to a workspace</p>
+{% endblock %}
+{% block content %}
+    <h1>Join {{ invite.organization.name }}?</h1>
+    <p>
+        You’ll join this workspace as a
+        <strong>{{ invite.get_role_display }}</strong>.
+    </p>
+    <form method="post" action="{{ request.path }}">
+        {% csrf_token %}
+        <button type="submit">Accept invitation</button>
+    </form>
+    <p style="text-align: center; margin-top: 1rem;">
+        <a class="subtle-link" href="/">Cancel</a>
+    </p>
+{% endblock %}

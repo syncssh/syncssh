@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: syncssh_test
+          POSTGRES_USER: syncssh
+          POSTGRES_PASSWORD: syncssh_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U syncssh -d syncssh_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DEBUG: "True"
+      SECRET_KEY: ci-only-secret-key
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: syncssh_test
+      DB_USER: syncssh
+      DB_PASSWORD: syncssh_test_password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python manage.py test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+
+  production-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f docker/Dockerfile.backend.prod -t syncssh-backend-ci .
+      - name: Verify unprivileged writable runtime directories
+        run: >-
+          docker run --rm --entrypoint sh syncssh-backend-ci -c
+          'test "$(id -u)" -ne 0 && mkdir -p /app/staticfiles && test -w /app/staticfiles'

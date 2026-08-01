@@ -1,0 +1,37 @@
+{% extends "allauth/layouts/base.html" %}
+{% comment %}
+Project override of allauth's account/signup.html, styled to mirror the React
+/signup page. No solo/team account-type picker here on purpose: this page is
+reached via invite links (and other backend bounces), where the new user joins
+the inviter's existing org instead of creating a workspace.
+Sticky values keep what the user typed when validation fails.
+{% endcomment %}
+{% block head_title %}Sign up — syncssh{% endblock %}
+{% block brand_caption %}
+    <p class="caption">Create your account</p>
+{% endblock %}
+{% block content %}
+    <form method="post" action="{% url 'account_signup' %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <label for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" autocomplete="username"
+               value="{{ form.username.value|default:'' }}" required autofocus>
+        {{ form.username.errors }}
+        <label for="id_email">Email</label>
+        <input type="email" name="email" id="id_email" autocomplete="email"
+               value="{{ form.email.value|default:'' }}" required>
+        {{ form.email.errors }}
+        <label for="id_password1">Password</label>
+        <input type="password" name="password1" id="id_password1" autocomplete="new-password" required>
+        {{ form.password1.errors }}
+        <label for="id_password2">Confirm Password</label>
+        <input type="password" name="password2" id="id_password2" autocomplete="new-password" required>
+        {{ form.password2.errors }}
+        {{ redirect_field }}
+        <button type="submit">Create Account</button>
+    </form>
+    <p style="text-align: center; margin-top: 1.25rem;">
+        Already have an account? <a href="{{ login_url }}">Sign in</a>
+    </p>
+{% endblock %}

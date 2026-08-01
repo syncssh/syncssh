@@ -1,0 +1,34 @@
+{% extends "allauth/layouts/base.html" %}
+{% comment %}
+Project override of allauth's account/login.html, styled to mirror the React
+/login page (AuthLayout + LoginForm): caption under the brand, labeled
+username/password fields, Sign In button, forgot-password + sign-up links.
+Hand-rolled form: allauth's ResetPasswordForm-style {% element %} machinery
+is skipped; the login form only needs `login`, `password`, and the redirect
+field to keep ?next intact (this page is mostly the invite-accept bounce).
+{% endcomment %}
+{% block head_title %}Sign in — syncssh{% endblock %}
+{% block brand_caption %}
+    <p class="caption">Authenticate to manage your SSH key fleet</p>
+{% endblock %}
+{% block content %}
+    <form method="post" action="{% url 'account_login' %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <label for="id_login">Username</label>
+        <input type="text" name="login" id="id_login" autocomplete="username"
+               value="{{ form.login.value|default:'' }}" required autofocus>
+        {{ form.login.errors }}
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+        {{ form.password.errors }}
+        {{ redirect_field }}
+        <button type="submit">Sign In</button>
+    </form>
+    <p style="text-align: center; margin-top: 1rem;">
+        <a class="subtle-link" href="{% url 'account_reset_password' %}">Forgot password?</a>
+    </p>
+    <p style="text-align: center; margin-top: 1.25rem;">
+        No account? <a href="{{ signup_url }}">Sign up</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,15 @@
+# ---- stage 1: build the SPA ----
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+# Optional: bake the install-command base URL. Falls back to the page origin at
+# runtime if empty, which is correct for single-host deployments.
+ARG VITE_INSTALL_BASE_URL=""
+RUN VITE_INSTALL_BASE_URL="$VITE_INSTALL_BASE_URL" npm run build
+
+# ---- stage 2: serve static SPA + reverse-proxy API via Caddy (auto-TLS) ----
+FROM caddy:2-alpine
+COPY docker/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv

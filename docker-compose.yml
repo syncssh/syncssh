@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-syncssh}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-syncssh}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # The bundled testvps target reaches the backend over docker DNS, so the
+      # agent's sync URL defaults to the compose hostname out of the box.
+      # Override in .env (SYNC_BASE_URL=...) when enrolling external hosts via
+      # tunnel/production, where targets resolve the public URL instead.
+      SYNC_BASE_URL: ${SYNC_BASE_URL:-http://backend:8000}
+      # Open-core edition: 'cloud' (all features) or 'oss' (self-host build).
+      SYNCSSH_EDITION: ${SYNCSSH_EDITION:-cloud}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  notifier:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: python manage.py drain_notifications --loop 30
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  testvps:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.testvps
+    restart: unless-stopped
+    environment:
+      VPS_ROOT_PASSWORD: ${VPS_ROOT_PASSWORD:-syncssh}
+    ports:
+      - "2222:22"
+
+volumes:
+  pgdata:

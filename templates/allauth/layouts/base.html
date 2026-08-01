@@ -1,0 +1,248 @@
+{% load i18n %}
+{% comment %}
+Project override of allauth/layouts/base.html — the server-rendered auth
+pages (email confirmation, invite-bounce login/signup, password reset) that
+can't run inside the React app because the visitor may be anonymous and the
+link target must be a backend URL.
+
+Styled to match the React frontend's terminal theme: same color tokens as
+frontend/src/index.css (keep them in sync by hand — there is no shared
+build), same shell-prompt wordmark as components/Brand.jsx. Self-contained
+on purpose: no CDN or web-font fetches, so these pages work on the same
+air-gapped boxes the rest of the product promises to. Dark mode reads the
+same localStorage "theme" key as the React app's pre-paint script (these
+pages are served same-origin: Vite proxy in dev, Caddy in prod), so the
+theme matches the dashboard exactly — light by default, like index.html.
+
+Long-term these flows migrate into the React frontend entirely (see ROADMAP).
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block head_title %}syncssh{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <!-- Same pre-paint theme pick as the React app's index.html: light unless
+         localStorage says "dark". Keeps these pages in lockstep with the
+         dashboard instead of following the OS. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          document.documentElement.dataset.theme = t === "dark" ? "dark" : "light";
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+            --base: #fbfbfb;
+            --surface: #ffffff;
+            --line: #d8e0dc;
+            --ink: #14201c;
+            --muted: #55615d;
+            --faint: #8a9591;
+            --accent: #0c8f63;
+            --accent-deep: #096b4a;
+            --danger: #dc2626;
+            --danger-soft: rgba(220, 38, 38, 0.08);
+            --on-accent: #04140e;
+            --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code",
+                "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+                Roboto, Helvetica, Arial, sans-serif;
+        }
+        :root[data-theme="dark"] {
+                color-scheme: dark;
+                --base: #0a0e0d;
+                --surface: #11171a;
+                --line: #232e33;
+                --ink: #d7e0dd;
+                --muted: #8a9794;
+                --faint: #5c6a67;
+                --accent: #35d399;
+                --accent-deep: #1f8f6a;
+                --danger: #f87171;
+                --danger-soft: rgba(248, 113, 113, 0.1);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: var(--base);
+            color: var(--ink);
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+        }
+        .shell { width: 100%; max-width: 28rem; }
+
+        /* Brand — mirrors components/Brand.jsx: mono wordmark + block caret. */
+        .brand {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .brand a {
+            font-family: var(--font-mono);
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: var(--ink);
+            text-decoration: none;
+            user-select: none;
+        }
+        .brand a span { color: var(--accent); }
+        .brand .caption {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--muted);
+            margin: 0.75rem 0 0;
+        }
+        .caret {
+            display: inline-block;
+            width: 0.55em;
+            height: 1em;
+            margin-left: 0.15em;
+            vertical-align: text-bottom;
+            background: var(--accent);
+            animation: blink 1.1s steps(1) infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+
+        /* Card + form metrics below are hand-copied from the React components
+           (AuthLayout p-6 sm:p-8, Input, Button) — keep them in sync. */
+        .allauth-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+        @media (min-width: 640px) { .allauth-card { padding: 2rem; } }
+        .allauth-card h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin: 0 0 0.5rem;
+        }
+        .allauth-card p { color: var(--muted); font-size: 0.875rem; margin: 0.5rem 0; }
+        .allauth-card a { color: var(--accent); text-decoration: none; }
+        .allauth-card a:hover { text-decoration: underline; }
+        .allauth-card a.subtle-link { color: var(--muted); }
+        .allauth-card a.subtle-link:hover { color: var(--accent); text-decoration: none; }
+        .allauth-card form > label:first-of-type { margin-top: 0; }
+        .allauth-card label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-top: 1rem;      /* form gap-4 between fields */
+        }
+        .allauth-card input[type=text],
+        .allauth-card input[type=email],
+        .allauth-card input[type=password],
+        .allauth-card input[type=url],
+        .allauth-card select {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            margin: 0.375rem 0 0;   /* label/input gap-1.5 */
+            background: var(--base);
+            color: var(--ink);
+            border: 1px solid var(--line);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: inherit;
+            outline: none;
+            accent-color: var(--accent);
+        }
+        .allauth-card input::placeholder { color: var(--faint); }
+        .allauth-card input:focus, .allauth-card select:focus {
+            border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+        }
+        .allauth-card button[type=submit] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.5rem 0.875rem;
+            margin-top: 1.25rem;    /* form gap-4 + Button mt-1 */
+            background: var(--accent);
+            color: var(--on-accent);
+            border: none;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            font-family: var(--font-mono);
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .allauth-card button[type=submit]:hover {
+            background: color-mix(in srgb, var(--accent) 90%, transparent);
+        }
+        .allauth-card .helptext, .allauth-card small {
+            display: block;
+            color: var(--faint);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .allauth-card ul.errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.25rem 0 0.5rem;
+            color: var(--danger);
+            font-size: 0.875rem;
+        }
+        .messages { margin-bottom: 1rem; }
+        .msg {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            background: var(--base);
+        }
+        .msg + .msg { margin-top: 0.5rem; }
+        .msg-error {
+            background: var(--danger-soft);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        .msg-success { border-color: var(--accent); color: var(--accent); }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="shell">
+        <div class="brand">
+            <a href="/">sync<span>ssh</span><span class="caret" aria-hidden="true"></span></a>
+            {% block brand_caption %}{% endblock %}
+        </div>
+
+        <div class="allauth-card">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="msg{% if 'error' in message.tags %} msg-error{% elif 'success' in message.tags %} msg-success{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+
+    </div>
+    {% block extra_body %}{% endblock %}
+</body>
+</html>

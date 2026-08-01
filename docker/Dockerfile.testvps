@@ -1,0 +1,23 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server curl cron nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# Allow root login and password auth; disable PAM to keep sshd happy in Docker
+RUN sed -i \
+    -e 's/#PermitRootLogin.*/PermitRootLogin yes/' \
+    -e 's/#PasswordAuthentication.*/PasswordAuthentication yes/' \
+    -e 's/UsePAM yes/UsePAM no/' \
+    /etc/ssh/sshd_config
+
+# sshd needs this dir to exist
+RUN mkdir /run/sshd
+
+# Password is injected at runtime via entrypoint so it can come from .env
+COPY docker/testvps-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 22
+
+ENTRYPOINT ["/entrypoint.sh"]

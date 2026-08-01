@@ -1,0 +1,35 @@
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+*.log
+staticfiles/
+media/
+
+# Environment — never commit real credentials
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Cloudflare Origin CA cert/key (never commit private keys)
+docker/cf-origin/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# macOS
+.DS_Store
+
+.venv
+
+# Local scanner output — never commit
+.gitleaks-report.json

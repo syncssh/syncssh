@@ -1,0 +1,127 @@
+# Production stack — native-free, single VPS.
+#   nginx-equivalent (Caddy, auto-TLS) + gunicorn + Postgres.
+# Usage: ./docker/prod-up.sh   (reads .env.prod)
+# See docs/PRODUCTION_DOCKER.md.
+
+# Distinct project name so the prod stack never collides with the dev stack
+# (docker-compose.yml), which defaults to project name "syncssh".
+name: syncssh-prod
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - shared_buffers=32MB
+      - -c
+      - effective_cache_size=128MB
+      - -c
+      - work_mem=1MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=20
+    environment:
+      POSTGRES_DB: ${DB_NAME:-syncssh}
+      POSTGRES_USER: ${DB_USER:-syncssh}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env.prod}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql
+    # No host port — the DB is only reachable inside the compose network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-syncssh} -d ${DB_NAME:-syncssh}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend.prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      # Force the in-network DB host regardless of what .env.prod says.
+      DB_HOST: db
+      # Backend traffic comes from the internal Caddy container. Forwarded
+      # client IPs are ignored unless the immediate peer is in this range.
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.16.0.0/12}
+    depends_on:
+      db:
+        condition: service_healthy
+    # No host port — only the web/Caddy service talks to it.
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  notifier:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend.prod
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DB_HOST: db
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.16.0.0/12}
+    depends_on:
+      db:
+        condition: service_healthy
+    # The image entrypoint migrates + execs gunicorn; the notifier only drains
+    # the webhook outbox, so bypass it. Backend handles migrations.
+    entrypoint: []
+    command: python manage.py drain_notifications --loop 30
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        VITE_INSTALL_BASE_URL: ${VITE_INSTALL_BASE_URL:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SYNCSSH_SITE_ADDRESS: ${SYNCSSH_SITE_ADDRESS:?set SYNCSSH_SITE_ADDRESS in .env.prod}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      # Empty = auto Let's Encrypt. Behind Cloudflare set "tls internal" (Full)
+      # or "tls /etc/caddy/origin/cert.pem /etc/caddy/origin/key.pem" (Full strict).
+      CADDY_TLS: ${CADDY_TLS:-}
+    volumes:
+      - caddy_data:/data      # persists Let's Encrypt certs across restarts
+      - caddy_config:/config
+      # Cloudflare Origin CA cert (only used by "Full (strict)" — drop cert.pem +
+      # key.pem in docker/cf-origin/). Harmless empty dir otherwise.
+      - ./docker/cf-origin:/etc/caddy/origin:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # Enable to share rate-limit state across >1 gunicorn worker:
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  # Then in .env.prod set: REDIS_URL=redis://redis:6379/0  and  GUNICORN_WORKERS=3
+
+volumes:
+  pgdata_prod:
+  caddy_data:
+  caddy_config:

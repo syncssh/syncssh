@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN groupadd --system syncssh \
+    && useradd --system --gid syncssh --home-dir /app --shell /usr/sbin/nologin syncssh \
+    && chown syncssh:syncssh /app
+
+COPY --chown=syncssh:syncssh . .
+
+RUN chmod +x docker/backend-prod-entrypoint.sh
+
+USER syncssh
+
+EXPOSE 8000
+
+# Entrypoint runs migrate + collectstatic, then execs gunicorn.
+ENTRYPOINT ["/app/docker/backend-prod-entrypoint.sh"]

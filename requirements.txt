@@ -1,0 +1,7 @@
+Django==6.0.7
+django-allauth==65.14.1
+django-cors-headers==4.6.0
+django-ratelimit==4.1.0
+psycopg[binary]==3.2.13
+gunicorn==23.0.0
+whitenoise==6.8.2

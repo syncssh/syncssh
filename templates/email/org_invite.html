@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ organization_name }} invite</title>
+</head>
+<body style="margin:0;padding:0;background:{{ c.bg }};font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:{{ c.text }};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{{ c.bg }};padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:{{ c.card }};border:1px solid {{ c.border }};border-radius:10px;overflow:hidden;">
+          <tr>
+            <td style="padding:24px 28px;border-bottom:1px solid {{ c.border }};">
+              <span style="font-size:18px;font-weight:600;color:{{ c.heading }};letter-spacing:0.5px;">Sync<span style="color:{{ c.accent }};">SSH</span></span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:{{ c.text }};">
+                {% if inviter %}<strong style="color:{{ c.heading }};">{{ inviter }}</strong> has invited you{% else %}You've been invited{% endif %}
+                to join the organization
+                <strong style="color:{{ c.heading }};">{{ organization_name }}</strong>
+                on SyncSSH as <span style="color:{{ c.accent }};">{{ role }}</span>.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+                <tr>
+                  <td style="border-radius:6px;background:{{ c.button }};">
+                    <a href="{{ invite_url }}" style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:600;color:{{ c.button_text }};text-decoration:none;">Accept invitation</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:{{ c.muted }};">
+                Or paste this link into your browser:
+              </p>
+              <p style="margin:0 0 20px;font-size:12px;line-height:1.6;word-break:break-all;">
+                <a href="{{ invite_url }}" style="color:{{ c.link }};text-decoration:none;">{{ invite_url }}</a>
+              </p>
+              <p style="margin:0;font-size:12px;line-height:1.6;color:{{ c.muted }};">
+                This invite expires on {{ expires_at }}. If you weren't expecting this, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 28px;border-top:1px solid {{ c.border }};">
+              <a href="{{ app_base_url }}" style="font-size:12px;color:{{ c.muted }};text-decoration:none;">{{ app_base_url }}</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
