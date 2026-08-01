@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { logout } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router";
 import { Brand } from "../components/Brand";
 import { Avatar } from "../components/Avatar";
 import { Icon, ServersIcon, KeyIcon, MailIcon } from "../components/icons";

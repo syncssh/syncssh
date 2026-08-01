@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { getOrg, removeMember } from "../../api/org";
 import { MainLayout } from "../../layouts/MainLayout";
 import { Card } from "../../components/Card";
