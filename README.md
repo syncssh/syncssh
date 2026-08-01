@@ -1,7 +1,9 @@
 <!-- markdownlint-disable first-line-h1 no-inline-html -->
 <p align="center">
-  <img width="420" src="frontend/src/assets/hero.png" alt="syncssh" />
+  <img width="112" src="frontend/public/favicon.svg" alt="syncssh logo" />
 </p>
+
+<h1 align="center">syncssh</h1>
 
 <p align="center">
   <strong>Centralized SSH key management for your server fleet.</strong><br />
