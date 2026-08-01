@@ -2,6 +2,6 @@ Django==6.0.7
 django-allauth==65.18.0
 django-cors-headers==4.6.0
 django-ratelimit==4.1.0
-psycopg[binary]==3.2.13
+psycopg[binary]==3.3.4
 gunicorn==23.0.0
 whitenoise==6.8.2
