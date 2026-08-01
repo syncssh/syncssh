@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { AuthLayout } from "../../layouts/AuthLayout";
 import { LoginForm } from "./LoginForm";
 
