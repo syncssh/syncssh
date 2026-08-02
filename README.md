@@ -31,8 +31,10 @@ cp .env.example .env        # change SECRET_KEY; dev defaults are fine for the r
 docker compose up --build
 ```
 
-Then open <http://localhost:5173>, create an org, and add a server — you'll get
-a one-shot install command. Paste it on any host:
+Then open <http://localhost:5173> and use **Sign up** to create your first
+account. Signup automatically creates your workspace and makes you its owner.
+After confirming the email link printed in the backend logs, add a server —
+you'll get a one-shot install command. Paste it on any host:
 
 ```bash
 curl -fsSL https://your-control-plane/api/v1/install/<token>/ | bash

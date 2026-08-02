@@ -6,6 +6,8 @@ All notable changes to SyncSSH are documented in this file. The project follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-02
+
 ### Added
 
 - Self-hosted Django control plane and React dashboard.

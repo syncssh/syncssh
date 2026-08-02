@@ -74,10 +74,15 @@ docker compose up -d
 
 **Try it:**
 
-1. Browser → http://localhost:5173. Sign up. (The "Solo developer" vs
+1. Browser → http://localhost:5173. Use **Sign up** to create the first
+   tester account. This is the normal local onboarding path: it creates the
+   account, its workspace, and an `OWNER` membership together. (The "Solo developer" vs
    "Team" choice is informational only — both create the same workspace
    with you as owner, and either can invite members later. The answer is
    recorded on the `auth.signup` audit event and changes nothing else.)
+   Local Docker uses Django's console email backend and email verification is
+   mandatory, so copy the confirmation URL from `docker compose logs backend`
+   and open it before logging in.
 2. Add a server in the dashboard. Copy the install command shown — it
    will look like `curl -sL http://backend:8000/api/v1/install/<token>/ | bash`.
 3. SSH into the bundled sandbox:
@@ -90,6 +95,38 @@ docker compose up -d
 5. Back in the dashboard, add your SSH public key. Wait ~60 seconds.
 6. On the sandbox: `cat ~/.ssh/authorized_keys` — your key now appears
    inside the `# === SYNCSSH BEGIN ===` block.
+
+### Terminal bootstrap alternative
+
+Use the app's **Sign up** flow above for local testers. `createsuperuser` is
+an operator/Django-admin tool only: it creates a user, but deliberately does
+**not** create a SyncSSH workspace. A user created that way can log in but
+will receive `403 Not a member of any organization` from the dashboard until
+it has an organization membership.
+
+For an intentional local operator bootstrap, create the account and its first
+workspace together:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+
+# Replace admin with the username entered above.
+docker compose exec backend python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from organizations.models import Organization, OrganizationMembership, Role
+user = get_user_model().objects.get(username='admin')
+org, _ = Organization.objects.get_or_create(
+    slug='local', defaults={'name': 'Local workspace'}
+)
+OrganizationMembership.objects.get_or_create(
+    user=user, organization=org, defaults={'role': Role.OWNER}
+)
+print(f'{user.username} is an OWNER of {org.name}')
+"
+```
+
+Refresh the dashboard after the command. This alternative is useful when you
+need Django-admin access; it is not required for normal application testing.
 
 **Why `backend:8000` and not `localhost:8000`**: the install command runs
 *on the target server*, where `localhost` would loop back to the target
