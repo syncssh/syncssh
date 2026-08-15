@@ -1,5 +1,5 @@
-Django==6.0.7
-django-allauth==65.18.0
+Django==6.1
+django-allauth==65.19.0
 django-cors-headers==4.9.0
 django-ratelimit==4.1.0
 psycopg[binary]==3.3.4
