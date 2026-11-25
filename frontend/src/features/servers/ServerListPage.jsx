@@ -25,7 +25,14 @@ const buildInstallCommand = (rawToken) =>
 // Sync heartbeat: cron polls once a minute, so anything older than ~3 min is
 // suspicious. Render as a colored chip next to the Active badge so admins
 // can spot a wedged agent at a glance instead of having to dig into logs.
-const SYNC_STALE_MS = [undefined, 3 * 60 * 1000, 63 * 60 * 1000, 24 * 60 * 1000 + 3 * 60 * 1000, 7 * 24 * 60 * 1000 + 3 * 60 * 1000, 29 * 24 * 60 * 1000 ];
+const SYNC_STALE_MS = [
+  undefined, // doesn't happen
+  3 * 60 * 1000, // stale after 3 minutes for minute-sync
+  63 * 60 * 1000, // stale after 63 minutes fo hourly sync
+  25 * 60 * 60 * 1000, // stale after 25 hours for daily sync
+  8 * 24 * 60 * 60 * 1000, // stale after 8 days for weekly sync
+  29 * 24 * 60 * 60 * 1000 // stale after 29 days for monthly syncs (every 28 days)
+];
 
 function syncStatus(lastSyncedAt, syncInterval, clockOffsetMs = 0) {
   if (!lastSyncedAt) return { label: "Never synced", tone: "neutral" };
