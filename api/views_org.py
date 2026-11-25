@@ -309,6 +309,7 @@ class ServerListView(View):
                 "is_active": s.is_active,
                 "allow_self_service": s.allow_self_service,
                 "last_synced_at": s.last_synced_at.isoformat() if s.last_synced_at else None,
+                "sync_interval": s.sync_interval
             }
             if is_admin:
                 entry["ip_address"] = s.ip_address
@@ -344,6 +345,14 @@ class ServerListView(View):
                 status=400,
             )
 
+        if int(data.get("interval", 0)) not in [1,2,3,4,5]:
+            return JsonResponse(
+                {
+                    "error": "Must choose a valid sync interval"
+                },
+                status=400,
+            )
+
         raw_token = Server.generate_token()
         server = Server.objects.create(
             organization=membership.organization,
@@ -353,6 +362,7 @@ class ServerListView(View):
             token_hash=Server.hash_token(raw_token),
             token_prefix=raw_token[:12],
             is_active=True,
+            sync_interval=int(data["interval"])
         )
         return JsonResponse({
             "id": server.id,
@@ -362,6 +372,7 @@ class ServerListView(View):
             "token": raw_token,
             "token_prefix": server.token_prefix,
             "is_active": server.is_active,
+            "sync_interval": server.sync_interval,
             "warning": "This is the only time the full token will be shown. Store it securely or rotate to issue a new one.",
         }, status=201)
 
