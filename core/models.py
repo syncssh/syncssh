@@ -55,6 +55,9 @@ class Server(models.Model):
     # registered but never enrolled yet.
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
+    # The intervals at wich sync is to be expected
+    sync_interval = models.IntegerField(default=1, null=False)
+
     class Meta:
         db_table = "servers"
         # Stable list order — without this, Postgres returns heap order and an

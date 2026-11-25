@@ -25,16 +25,16 @@ const buildInstallCommand = (rawToken) =>
 // Sync heartbeat: cron polls once a minute, so anything older than ~3 min is
 // suspicious. Render as a colored chip next to the Active badge so admins
 // can spot a wedged agent at a glance instead of having to dig into logs.
-const SYNC_STALE_MS = 3 * 60 * 1000;
+const SYNC_STALE_MS = [undefined, 3 * 60 * 1000, 63 * 60 * 1000, 24 * 60 * 1000 + 3 * 60 * 1000, 7 * 24 * 60 * 1000 + 3 * 60 * 1000, 29 * 24 * 60 * 1000 ];
 
-function syncStatus(lastSyncedAt, clockOffsetMs = 0) {
+function syncStatus(lastSyncedAt, syncInterval, clockOffsetMs = 0) {
   if (!lastSyncedAt) return { label: "Never synced", tone: "neutral" };
   // Project the local clock onto the server's timeline (clockOffsetMs =
   // localNow − serverNow at fetch) so a skewed device clock can't make a
   // freshly-synced server look stale. The offset cancels in this delta.
   const age = Date.now() - clockOffsetMs - new Date(lastSyncedAt).getTime();
   const ago = formatAgo(age);
-  if (age > SYNC_STALE_MS) {
+  if (age > SYNC_STALE_MS[syncInterval]) {
     return { label: `Stale — last sync ${ago}`, tone: "warn" };
   }
   return { label: `Synced ${ago}`, tone: "accent" };
@@ -58,7 +58,7 @@ export function ServerListPage() {
 
   const [servers, setServers] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", ip_address: "", ssh_user: "" });
+  const [form, setForm] = useState({ name: "", ip_address: "", ssh_user: "", interval: 1 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   // Bumped on a timer so the relative-time chips ("Synced 12s ago") tick
@@ -121,7 +121,7 @@ export function ServerListPage() {
     e.preventDefault();
     try {
       const res = await createServer(form);
-      setForm({ name: "", ip_address: "", ssh_user: "" });
+      setForm({ name: "", ip_address: "", ssh_user: "", interval: 1 });
       setShowForm(false);
       setSecretReveal({ serverName: res.data.name, rawToken: res.data.token });
       load();
@@ -194,7 +194,7 @@ export function ServerListPage() {
             onSubmit={handleCreate}
             className="bg-surface border border-line rounded-lg p-4 sm:p-6 mb-6 space-y-4"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Input
                 label="Name"
                 placeholder="prod-api-01"
@@ -216,6 +216,20 @@ export function ServerListPage() {
                 onChange={(e) => setForm({ ...form, ssh_user: e.target.value })}
                 required
               />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-mono uppercase tracking-wider text-muted">Sync-Interval</label>
+                <select
+                  value={form.interval}
+                  onChange={(e) => setForm({ ...form, interval: e.target.value })}
+                  className="bg-base border border-line rounded px-3 py-2 text-sm text-ink h-[38px] focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50"
+                >
+                  <option value={1}>Every Minute</option>
+                  <option value={2}>Every Hour</option>
+                  <option value={3}>Every Day</option>
+                  <option value={4}>Every Week</option>
+                  <option value={5}>Every Month</option>
+                </select>
+              </div>
             </div>
             <div className="flex justify-end">
               <Button type="submit">Create server</Button>
@@ -243,7 +257,7 @@ export function ServerListPage() {
         ) : (
           <div className="space-y-3">
             {servers.map((s) => {
-              const sync = syncStatus(s.last_synced_at, clockOffset);
+              const sync = syncStatus(s.last_synced_at, s.sync_interval, clockOffset);
               return (
                 <Card key={s.id} className="p-4">
                   {/* Header row: name + active LED, always side by side */}

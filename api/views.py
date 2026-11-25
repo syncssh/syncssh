@@ -16,6 +16,7 @@ from django_ratelimit.decorators import ratelimit
 from core.models import PublicKey, Server
 from organizations.models import OrganizationInvite, OrganizationMembership, ApiKey, TokenScope
 from syncssh import audit
+from random import randint
 
 
 def _extract_server_token(request) -> Optional[str]:
@@ -142,7 +143,7 @@ cat > "$CONFIG_FILE" << 'ENDWORKER'
 #!/bin/bash
 # Spread fleet syncs across the cron minute so servers don't all hit the
 # control plane at the same instant; the install-time run skips the wait.
-[ "$1" = "--now" ] || sleep $((RANDOM % 30))
+{sleep_timeout}
 # Bail out before touching authorized_keys if the fetch fails: a transient
 # outage must not strip the managed keys until the next successful sync.
 KEYS=$(curl -sf {curl_hardening}-H {authorization_header} {sync_url}) || exit 0
@@ -165,7 +166,7 @@ chown "$SSH_USER:$SSH_USER" "$CONFIG_FILE"
 
 # Install cron as target user — || true guards against set -e killing the subshell when no crontab exists yet
 (crontab -u "$SSH_USER" -l 2>/dev/null || true) | grep -v "syncssh" | crontab -u "$SSH_USER" - || true
-((crontab -u "$SSH_USER" -l 2>/dev/null || true); echo "* * * * * $CONFIG_FILE") | crontab -u "$SSH_USER" -
+((crontab -u "$SSH_USER" -l 2>/dev/null || true); echo "{cron_pattern} $CONFIG_FILE") | crontab -u "$SSH_USER" -
 
 echo "syncssh agent installed. Running initial sync..."
 bash "$CONFIG_FILE" --now
@@ -234,6 +235,25 @@ echo "Done."
         curl_hardening = (
             "--proto '=https' --tlsv1.2 " if sync_url.startswith("https://") else ""
         )
+
+        # setting sleep timeout only if every minute. otherwise the balancing is already doe via random cron times
+        sleep_timeout = '[ "$1" = "--now" ] || sleep $((RANDOM % 30))' if server.sync_interval == 1 else ""
+
+        cron_pattern = "* * * * *"
+        match server.sync_interval:
+            case 2:
+                # Once every hour, selecting random minute
+                cron_pattern = f"{randint(0,59)} * * * *"
+            case 3:
+                # Once every day. Selecting random minute and hour
+                cron_pattern = f"{randint(0,59)} {randint(0,23)} * * *"
+            case 4:
+                # Once every week. Selecting random minute, hour and weekday
+                cron_pattern = f"{randint(0,59)} {randint(0,23)} * * {randint(0,6)}"
+            case 5:
+                # Once every monthay. Selecting random minute, hour and day of month
+                cron_pattern = f"{randint(0,59)} {randint(0,23)} {randint(1,28)} * *"
+
         script = self.SCRIPT_TEMPLATE.format(
             # All values interpolated into the shell script are quoted here as
             # a second line of defence. This protects scripts generated for
@@ -243,6 +263,8 @@ echo "Done."
             ssh_user=shlex.quote(server.ssh_user),
             authorization_header=shlex.quote(f"Authorization: Bearer {token}"),
             curl_hardening=curl_hardening,
+            sleep_timeout=sleep_timeout,
+            cron_pattern=cron_pattern,
         )
         return HttpResponse(script, content_type="text/plain")
 
